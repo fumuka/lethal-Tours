@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>リーサル理論打点計算ツール</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+    }
+
+    h1 {
+      font-size: 1.5em;
+      margin-bottom: 1em;
+    }
+
+    .form-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .form-group label {
+      flex: 1 1 200px;
+      min-width: 150px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      max-width: 120px;
+      padding: 4px;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 6px 12px;
+      font-size: 1em;
+    }
+
+    .formula {
+      background: #f4f4f4;
+      padding: 10px;
+      border-left: 5px solid #ccc;
+      margin-top: 20px;
+      font-size: 0.9em;
+    }
+
+    .links {
+      margin-top: 20px;
+    }
+
+    ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>リーサル理論打点計算ツール</h1>
+
+<p>以下の値を入力すると、理論的な初打点（a）と各攻撃時の打点が計算されます。</p>
+
+<div class="form-group"><label>合計打点 x: <input type="number" id="inputX" value="180000"></label></div>
+<div class="form-group"><label>総攻撃回数 y: <input type="number" id="inputY" value="4"></label></div>
+<div class="form-group"><label>必要攻撃回数 z: <input type="number" id="inputZ" value="3"></label></div>
+<div class="form-group"><label>リーダーライン L: <input type="number" id="inputL" value="20000"></label></div>
+
+<button id="calcBtn">計算する</button>
+
+<h2>結果</h2>
+<p id="resultA">理論初打点 a = –</p>
+<p id="resultEach"></p>
+
+<h3>使用計算式</h3>
+<div class="formula">
+  <strong>必要攻撃回数が2の場合 (z = 2, y > 2):</strong><br>
+  a = (x - (L - 5000) × ((y - 2)(y - 1)/2)) / y + (L - 5000) × (y - 2)<br><br>
+  <strong>必要攻撃回数が3の場合 (z = 3, y > 3):</strong><br>
+  a = x / y + ((L - 5000) / 3) / y × (y^2 - y/2 - y)
+</div>
+
+<div class="links">
+  <h3>参考リンク</h3>
+  <ul>
+    <li><a href="https://note.com/issa0281/n/n342280fab55d?magazine_key=mf2939cda2665" target="_blank">NOTE記事：リーサル理論解説</a></li>
+    <li><a href="https://www.youtube.com/@fumuka_1211" target="_blank">YouTubeチャンネル：ふむか</a></li>
+  </ul>
+</div>
+
+<script>
+function calculate(){
+  let x = +document.getElementById('inputX').value;
+  let y = +document.getElementById('inputY').value;
+  let z = +document.getElementById('inputZ').value;
+  let L = +document.getElementById('inputL').value;
+
+  if ((z === 2 && y > 2) || (z === 3 && y > 3)) {
+    let a = 0;
+    if (z === 2) {
+      let B = (y - 2) * (y - 1) / 2;
+      a = (x - (L - 5000) * B) / y + (L - 5000) * (y - 2);
+    } else if (z === 3) {
+      let term1 = x / y;
+      let term2 = ((L - 5000) / 3) / y * (y * y - y / 2 - y);
+      a = term1 + term2;
+    }
+
+    a = Math.floor(a / 5000) * 5000;
+    document.getElementById('resultA').textContent = `理論初打点 a = ${a}`;
+
+    let aiList = [a];
+    let total = a;
+    let remaining = x - a;
+
+    for (let i = 2; i <= y; i++) {
+      let remainingAttacks = y - i + 1;
+      let ai = Math.floor((remaining / remainingAttacks) / 5000) * 5000;
+      aiList.push(ai);
+      total += ai;
+      remaining -= ai;
+    }
+
+    let adjust = x - total;
+    if (adjust !== 0 && aiList.length > 1) {
+      aiList[aiList.length - 1] += adjust;
+    }
+
+    let resultList = '<ul>';
+    let rem = x;
+    for (let i = 0; i < aiList.length; i++) {
+      rem -= aiList[i];
+      resultList += `<li>${i + 1}回目: ${aiList[i]}（残り打点: ${rem}）</li>`;
+    }
+    resultList += '</ul>';
+    document.getElementById('resultEach').innerHTML = resultList;
+  } else {
+    alert("条件に一致する z と y を入力してください。(z=2, y>2 または z=3, y>3)");
+  }
+}
+
+document.getElementById('calcBtn').onclick = calculate;
+</script>
+
+</body>
+</html>
