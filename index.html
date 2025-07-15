@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>リーサル計算ツール（Z=1時 atco控除）</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: 'Segoe UI', 'Meiryo', sans-serif; background: #f9f9f9; margin: 0; padding: 0; }
+    .container { max-width: 440px; margin: 12px auto 24px auto; background: #fff; border-radius: 10px; box-shadow: 0 3px 12px #0001; padding: 18px 10px 24px 10px; }
+    .inputs { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; margin-bottom: 14px; }
+    .input-group { flex: 1 1 48%; display: flex; flex-direction: column; font-size: 1em; }
+    .input-group label { font-size: .98em; margin-bottom: 2px; color: #444; }
+    .input-group input, .input-group select { font-size: 1.07em; padding: 5px 6px; border: 1px solid #bbb; border-radius: 5px; background: #fafbfc; }
+    .atco-section { margin: 14px 0; padding: 10px; background: #f0f4f8; border-radius: 5px; border: 1px solid #ccc; }
+    .atco-title { font-size: 1.05em; font-weight: bold; margin-bottom: 8px; color: #333; }
+    .atco-note { font-size: 0.96em; color: #1976d2; margin-bottom: 8px; }
+    .atco-inputs { display: flex; flex-wrap: wrap; gap: 8px; }
+    .atco-input-group { flex: 1 1 48%; display: flex; flex-direction: column; font-size: 0.95em; }
+    .atco-input-group label { font-size: 0.9em; margin-bottom: 2px; color: #555; }
+    .atco-input-group input { font-size: 1em; padding: 4px 5px; border: 1px solid #bbb; border-radius: 4px; background: #fff; }
+    .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .formula-section { font-size: 0.98em; color: #2e4a6b; background: #f8fbff; border-radius: 4px; padding: 4px 8px; border-left: 3px solid #1976d2; word-break: break-all; margin: 6px 0 14px 0;}
+    .a-count-label { color: #1976d2; font-weight: bold; margin-right: 8px; font-size: 1.06em; }
+    .btns { display: flex; gap: 8px; margin: 14px 0 8px 0; justify-content: center; }
+    button { flex: 1; background: #1976d2; color: #fff; border: none; border-radius: 7px; padding: 9px 0; font-size: 1.06em; font-weight: bold; cursor: pointer; transition: background .15s; }
+    button:active { background: #13539c; }
+    .history-list { background: #f7f7fd; border-radius: 5px; padding: 8px 5px 8px 8px; font-size: .99em; line-height: 1.5; max-height: 220px; overflow-y: auto; margin-bottom: 0; }
+    .end-msg { margin-top: 12px; color: #e53935; font-weight: bold; font-size: 1.14em; text-align: center; }
+    @media (max-width: 450px) {
+      .container { max-width: 97vw; padding: 9px 2vw 18px 2vw; }
+      .atco-input-group { flex: 1 1 100%; }
+    }
+    .footer-links {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 0.98em;
+      color: #666;
+      padding-bottom: 12px;
+      line-height: 2;
+    }
+    .footer-links a {
+      color: #1976d2;
+      text-decoration: none;
+      margin: 0 8px;
+      transition: color .15s;
+    }
+    .footer-links a:hover {
+      color: #e53935;
+      text-decoration: underline;
+    }
+    .footer-links span {
+      margin-right:6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="inputs">
+      <div class="input-group">
+        <label for="xPower">合計パワー X</label>
+        <input id="xPower" type="number" min="1" step="1" value="120000">
+      </div>
+      <div class="input-group">
+        <label for="leaderPower">相手リーダーのパワー L</label>
+        <input id="leaderPower" type="number" min="1" step="1" value="20000">
+      </div>
+      <div class="input-group">
+        <label for="yAttack">総攻撃回数 Y</label>
+        <input id="yAttack" type="number" min="1" step="1" value="5">
+      </div>
+      <div class="input-group">
+        <label for="zNeed">必要攻撃回数 Z</label>
+        <select id="zNeed">
+          <option value="2">2</option>
+          <option value="3" selected>3</option>
+        </select>
+      </div>
+    </div>
+    <div class="atco-section" id="atcoSection">
+      <div class="atco-title">atco値設定</div>
+      <div class="atco-note">※at-coの高い順に入力してください</div>
+      <div class="atco-inputs" id="atcoInputs"></div>
+    </div>
+    <div class="row">
+      <span class="a-count-label" id="aCountLabel"></span>
+      <span>打点 A：</span>
+      <span id="aDamage">-</span>
+    </div>
+    <div class="formula-section" id="formulaText"></div>
+    <div class="btns">
+      <button id="calcBtn">計算</button>
+      <button id="successBtn">攻撃が通った</button>
+      <button id="failBtn">攻撃が守られた</button>
+    </div>
+    <div class="history-list" id="history"></div>
+    <div class="end-msg" id="endMsg"></div>
+  </div>
+  <footer class="footer-links">
+    <div>
+      <span style="font-weight:bold;">ばべるぼぶるさん</span>
+      <a href="https://x.com/babel_more?s=21&t=n-cphHkmEa1psbvPS_n9kg" target="_blank" rel="noopener noreferrer">X</a>｜
+      <a href="https://note.com/issa0281/n/n342280fab55d?magazine_key=mf2939cda2665" target="_blank" rel="noopener noreferrer">note</a>
+    </div>
+    <div>
+      <span style="font-weight:bold;">双依ふむか</span>
+      <a href="https://x.com/souifumuka?s=21&t=n-cphHkmEa1psbvPS_n9kg" target="_blank" rel="noopener noreferrer">X</a>｜
+      <a href="https://www.youtube.com/@fumuka_1211" target="_blank" rel="noopener noreferrer">YouTube</a>
+    </div>
+  </footer>
+  <script>
+    let X = 120000, L = 20000, Y = 5, Z = 3;
+    let attackLeft = Y, attackNeed = Z, totalPower = X, leaderPower = L;
+    let history = [];
+    let finished = false;
+    let maxAtcoN = 10;
+
+    const $ = id => document.getElementById(id);
+
+    function to5000Unit(v) { return Math.floor((v + 2499) / 5000) * 5000; }
+
+    function generateAtcoInputs() {
+      const atcoInputsContainer = $("atcoInputs");
+      atcoInputsContainer.innerHTML = "";
+      let y0 = parseInt($("yAttack").value, 10) || 0;
+      let z0 = parseInt($("zNeed").value, 10) || 0;
+      let maxN = Math.max(1, y0 - z0);
+      for (let i = maxN; i >= 1; i--) {
+        const inputGroup = document.createElement("div");
+        inputGroup.className = "atco-input-group";
+        const label = document.createElement("label");
+        label.textContent = `atco${i}（N=${i}）`;
+        label.setAttribute("for", `atco${i}`);
+        const input = document.createElement("input");
+        input.type = "number";
+        input.id = `atco${i}`;
+        input.min = "0";
+        input.step = "1";
+        input.value = "0";
+        input.addEventListener('input', () => { showCurrentA(); });
+        inputGroup.appendChild(label);
+        inputGroup.appendChild(input);
+        atcoInputsContainer.appendChild(inputGroup);
+      }
+      maxAtcoN = maxN;
+    }
+
+    function getAtcoValue(n) {
+      const input = $(`atco${n}`);
+      return input ? parseInt(input.value, 10) || 0 : 0;
+    }
+
+    function calcZ2AtcoDeduction(currentY, currentZ) {
+      let N = currentY - currentZ;
+      let deduction = 0;
+      let used = [];
+      for (let j = 0; j < N; j++) {
+        let yPrime = currentY - j;
+        if (yPrime <= 2) break;
+        let n = N - j;
+        let atcoVal = getAtcoValue(n);
+        let val = atcoVal * (yPrime-1) / currentY;
+        deduction += val;
+        used.push(`atco${n}×${yPrime-1}/${currentY}`);
+      }
+      return {deduction, used};
+    }
+
+    function calcZ3AtcoDeduction(currentY, currentZ) {
+      let N = currentY - currentZ;
+      let sum = 0;
+      let used = [];
+      if (currentY === 4) {
+        let v = getAtcoValue(1); sum += v / 4; used.push(`atco1/4`);
+      } else if (currentY === 5) {
+        let v2 = getAtcoValue(2); if (v2) { sum += v2 / 5; used.push(`atco2/5`); }
+        let v1 = getAtcoValue(1); if (v1) { let t = v1/5 + (v1/5)*(1/3); sum += t; used.push(`(atco1/5+atco1/5×1/3)`); }
+      } else if (currentY === 6) {
+        let v3 = getAtcoValue(3); if (v3) { sum += v3 / 6; used.push(`atco3/6`); }
+        let v2 = getAtcoValue(2); if (v2) { let t = v2/6 + (v2/6)*(2/4); sum += t; used.push(`(atco2/6+atco2/6×2/4)`); }
+        let v1 = getAtcoValue(1); if (v1) { let t = v1/6 + (v1/6)*(2/4); sum += t; used.push(`(atco1/6+atco1/6×2/4)`); }
+      } else if (currentY === 7) {
+        let v4 = getAtcoValue(4); if (v4) { sum += v4/7; used.push(`atco4/7`);}
+        let v3 = getAtcoValue(3); if (v3) { let t = v3/7 + (v3/7)*(3/5); sum += t; used.push(`(atco3/7+atco3/7×3/5)`);}
+        let v2 = getAtcoValue(2); if (v2) { let t = v2/7 + (v2/7)*(4/5); sum += t; used.push(`(atco2/7+atco2/7×4/5)`);}
+        let v1 = getAtcoValue(1); if (v1) { let t = v1/7 + (v1/7)*(3/5); sum += t; used.push(`(atco1/7+atco1/7×3/5)`);}
+      }
+      return {sum, used};
+    }
+
+    // 5000単位均等割り、割り切れない場合は先頭から小さく
+    function splitBy5000(x, n) {
+      let base = Math.floor(x / n / 5000) * 5000;
+      let remain = x - base * n;
+      let arr = [];
+      for (let i = 0; i < n; ++i) arr.push(base);
+      let idx = 0;
+      while (remain > 0) {
+        let add = Math.min(remain, 5000);
+        arr[idx] += add;
+        remain -= add;
+        idx++;
+      }
+      arr.sort((a,b)=>a-b); // 必ず先頭から小さい順
+      return arr;
+    }
+
+    // Z=1時は残りX-atcoN-atcoN-1-...-atco1
+    function finishWithZ1() {
+      let N = attackLeft - 1;
+      let atcoSum = 0;
+      let used = [];
+      for (let n = N; n >= 1; n--) {
+        let v = getAtcoValue(n);
+        atcoSum += v;
+        used.push(`atco${n}`);
+      }
+      let a1 = totalPower - atcoSum;
+      // 5000単位で丸め
+      a1 = to5000Unit(a1);
+      history.push({
+        A: a1,
+        X: totalPower - a1,
+        Y: attackLeft - 1,
+        Z: 0,
+        pass: `Z=1時 atco控除 [${used.join('+')}]`
+      });
+      totalPower -= a1;
+      attackLeft = 0;
+      attackNeed = 0;
+      finished = true;
+      showCurrentA();
+      $("endMsg").textContent = "Z=1でatco控除後計算終了";
+      $("history").innerHTML = history.map((h, i) =>
+        `#${i+1} 攻撃: 打点A=${h.A} | 残パワーX=${h.X} | 残Y=${h.Y} | 残Z=${h.Z} (${h.pass})`
+      ).join("<br>");
+    }
+
+    function calcA(X, L, Y, Z) {
+      if (Z === Y && Z > 0) {
+        let arr = splitBy5000(X, Z);
+        return arr[0];
+      }
+      if (Z === 1 && Y > 0) {
+        // Z=1はatcoN-atcoN-1-...-atco1控除
+        let N = Y - 1;
+        let atcoSum = 0;
+        for (let n = N; n >= 1; n--) {
+          atcoSum += getAtcoValue(n);
+        }
+        return to5000Unit(X - atcoSum);
+      }
+      if (Z === 2 && Y > 2) {
+        let baseA = (X - (L-5000) * ((Y-2)*(Y-1)/2)) / Y + (L-5000) * (Y-2);
+        let {deduction} = calcZ2AtcoDeduction(Y, Z);
+        return to5000Unit(baseA - deduction);
+      }
+      if (Z === 3 && Y >= 4 && Y <= 7) {
+        let l5 = (L - 5000) / 3;
+        let baseA = (X / Y) + (l5 / Y) * ((Y*Y - Y)/2 - 3);
+        let {sum} = calcZ3AtcoDeduction(Y, Z);
+        return to5000Unit(baseA - sum);
+      }
+      return to5000Unit(X / Math.max(1, Z));
+    }
+
+    function showCurrentA() {
+      if (finished) {
+        $("aCountLabel").textContent = "";
+        $("aDamage").textContent = "-";
+        $("formulaText").textContent = "計算終了（攻撃割り振り済）";
+        return;
+      }
+      let attackNum = history.length;
+      let aVal = calcA(totalPower, leaderPower, attackLeft, attackNeed);
+      $("aCountLabel").textContent = attackLeft > 0 ? `攻撃${attackNum+1}回目` : "";
+      $("aDamage").textContent = attackLeft > 0 ? aVal : "-";
+
+      let formula = "";
+      if (attackNeed === attackLeft && attackNeed > 0) {
+        formula = "A = X / Z （5000単位で均等割り。割り切れない場合は最初の攻撃を低く）";
+      } else if (attackNeed === 1 && attackLeft > 0) {
+        let N = attackLeft - 1;
+        let used = [];
+        for (let n = N; n >= 1; n--) used.push(`atco${n}`);
+        formula = `A = 残X - [${used.join(' + ')}] （5000単位丸め）`;
+      } else if (attackNeed === 2 && attackLeft > 2) {
+        let {used} = calcZ2AtcoDeduction(attackLeft, attackNeed);
+        formula =
+          `A = (x-(L-5000)×((y-2)(y-1)/2))/y+(L-5000)×(y-2) - Σ[((atcoN)×(y'-1)/y)] = ベースA - [${used.join(' + ')}]`;
+      } else if (attackNeed === 3 && attackLeft >= 4 && attackLeft <= 7) {
+        let {used} = calcZ3AtcoDeduction(attackLeft, attackNeed);
+        let base = `(X/Y)+(L-5000)/3/Y×((Y^2-Y)/2-3)`;
+        formula = `A = ${base} ${used.length ? '- ' + used.join(' - ') : ''}`;
+      } else {
+        formula = "A = X / Z (均等割り)";
+      }
+      $("formulaText").textContent = formula;
+    }
+
+    function afterAttack(pass) {
+      if (finished) return;
+      // Z=Y先処理
+      if (attackNeed === attackLeft && attackNeed > 0) {
+        let arr = splitBy5000(totalPower, attackNeed);
+        arr.sort((a,b)=>a-b);
+        for (let i = 0; i < attackNeed; ++i) {
+          let remainX = totalPower - arr.slice(0,i+1).reduce((s,v)=>s+v,0);
+          history.push({
+            A: arr[i],
+            X: remainX,
+            Y: attackLeft - (i + 1),
+            Z: attackNeed - (i + 1),
+            pass: "均等割"
+          });
+        }
+        totalPower = 0;
+        attackLeft = 0;
+        attackNeed = 0;
+        finished = true;
+        showCurrentA();
+        $("endMsg").textContent = "攻撃割り振り完了（Y=Zで均等分配終了）";
+        $("history").innerHTML = history.map((h, i) =>
+          `#${i+1} 攻撃: 打点A=${h.A} | 残パワーX=${h.X} | 残Y=${h.Y} | 残Z=${h.Z} (${h.pass})`
+        ).join("<br>");
+        return;
+      }
+      // Z=1先処理
+      if (attackNeed === 1 && attackLeft > 0) {
+        finishWithZ1();
+        return;
+      }
+      let nowA = calcA(totalPower, leaderPower, attackLeft, attackNeed);
+      history.push({
+        A: nowA,
+        X: totalPower - nowA,
+        Y: attackLeft - 1,
+        Z: pass ? attackNeed - 1 : attackNeed,
+        pass: pass ? "通った" : "守られた"
+      });
+      totalPower -= nowA;
+      attackLeft -= 1;
+      if (pass) attackNeed -= 1;
+      // 再度Z=Y/Z=1条件チェック
+      if (attackNeed === attackLeft && attackNeed > 0) {
+        let arr = splitBy5000(totalPower, attackNeed);
+        arr.sort((a,b)=>a-b);
+        for (let i = 0; i < attackNeed; ++i) {
+          let remainX = totalPower - arr.slice(0,i+1).reduce((s,v)=>s+v,0);
+          history.push({
+            A: arr[i],
+            X: remainX,
+            Y: attackLeft - (i + 1),
+            Z: attackNeed - (i + 1),
+            pass: "均等割"
+          });
+        }
+        totalPower = 0;
+        attackLeft = 0;
+        attackNeed = 0;
+        finished = true;
+        showCurrentA();
+        $("endMsg").textContent = "攻撃割り振り完了（Y=Zで均等分配終了）";
+        $("history").innerHTML = history.map((h, i) =>
+          `#${i+1} 攻撃: 打点A=${h.A} | 残パワーX=${h.X} | 残Y=${h.Y} | 残Z=${h.Z} (${h.pass})`
+        ).join("<br>");
+        return;
+      }
+      if (attackNeed === 1 && attackLeft > 0) {
+        finishWithZ1();
+        return;
+      }
+      if (attackNeed > 0 && attackLeft > 0) showCurrentA();
+      else {
+        $("aDamage").textContent = "-";
+        $("formulaText").textContent = "";
+        $("aCountLabel").textContent = "";
+        finished = true;
+      }
+      $("history").innerHTML = history.map((h, i) =>
+        `#${i+1} 攻撃: 打点A=${h.A} | 残パワーX=${h.X} | 残Y=${h.Y} | 残Z=${h.Z} (${h.pass})`
+      ).join("<br>");
+    }
+
+    $("calcBtn").onclick = () => {
+      history = [];
+      totalPower = parseInt($("xPower").value, 10) || 0;
+      leaderPower = parseInt($("leaderPower").value, 10) || 0;
+      attackLeft = parseInt($("yAttack").value, 10) || 0;
+      attackNeed = parseInt($("zNeed").value, 10) || 0;
+      finished = false;
+      showCurrentA();
+      $("history").innerHTML="";
+      $("endMsg").textContent="";
+    };
+    $("successBtn").onclick = () => afterAttack(true);
+    $("failBtn").onclick = () => afterAttack(false);
+
+    $("xPower").onchange =
+    $("leaderPower").onchange =
+    $("yAttack").onchange =
+    $("zNeed").onchange = () => {
+      history = [];
+      totalPower = parseInt($("xPower").value, 10) || 0;
+      leaderPower = parseInt($("leaderPower").value, 10) || 0;
+      attackLeft = parseInt($("yAttack").value, 10) || 0;
+      attackNeed = parseInt($("zNeed").value, 10) || 0;
+      finished = false;
+      generateAtcoInputs();
+      showCurrentA();
+      $("history").innerHTML="";
+      $("endMsg").textContent="";
+    };
+
+    // --- 追加改善案 ---
+    // 1. atco値入力の初期値保持・攻撃回数変更時の値保持
+    // 2. ユーザー体験向上のための入力全体リセットボタン
+    // 3. 打点Aの数値をクリップボードへコピーできるように
+
+    // 1. atco値保持（キー: atcoBackup）
+    let atcoBackup = {};
+    function backupAtcoInputs() {
+      for (let n = 1; n <= maxAtcoN; n++) {
+        let val = getAtcoValue(n);
+        if (val !== undefined) atcoBackup[n] = val;
+      }
+    }
+    function restoreAtcoInputs() {
+      for (let n = 1; n <= maxAtcoN; n++) {
+        if (typeof atcoBackup[n] !== "undefined") {
+          let input = $(`atco${n}`);
+          if (input) input.value = atcoBackup[n];
+        }
+      }
+    }
+    // atco入力イベントでbackup
+    $("atcoSection").addEventListener('input', backupAtcoInputs);
+    // 攻撃回数や必要回数変更時も値復元
+    $("yAttack").addEventListener('change', () => {
+      generateAtcoInputs();
+      restoreAtcoInputs();
+      showCurrentA();
+    });
+    $("zNeed").addEventListener('change', () => {
+      generateAtcoInputs();
+      restoreAtcoInputs();
+      showCurrentA();
+    });
+
+    // 2. リセットボタン追加
+    const btns = document.querySelector('.btns');
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = "リセット";
+    resetBtn.style.background = "#aaa";
+    resetBtn.onclick = () => {
+      $("xPower").value = 120000;
+      $("leaderPower").value = 20000;
+      $("yAttack").value = 5;
+      $("zNeed").value = 3;
+      atcoBackup = {};
+      generateAtcoInputs();
+      showCurrentA();
+      $("history").innerHTML = "";
+      $("endMsg").textContent = "";
+    };
+    btns.appendChild(resetBtn);
+
+    // 3. 打点Aコピー
+    $("aDamage").style.cursor = "pointer";
+    $("aDamage").title = "クリックでクリップボードにコピー";
+    $("aDamage").onclick = function(){
+      if (this.textContent && this.textContent !== "-") {
+        navigator.clipboard.writeText(this.textContent)
+          .then(() => {
+            this.title = "コピーしました！";
+            setTimeout(()=>{ this.title = "クリックでクリップボードにコピー"; }, 1000);
+          });
+      }
+    };
+
+    // 初期化
+    generateAtcoInputs();
+    showCurrentA();
+  </script>
+</body>
+</html>
